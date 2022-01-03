@@ -24,12 +24,12 @@ func CreatePacket(magic uint32, command string, msg Message) Packet {
 }
 
 func MarshalPacket(out []byte, packet Packet) []byte {
-	out = marshalUint32(out, packet.Magic)
+	out = MarshalUint32(out, packet.Magic)
 	out = MarshalFixedStr(out, packet.Command, 12)
 
 	payload := packet.Message.Marshal([]byte{})
-	out = marshalUint32(out, uint32(len(payload)))
-	out = marshalUint32(out, checksum(payload))
+	out = MarshalUint32(out, uint32(len(payload)))
+	out = MarshalUint32(out, checksum(payload))
 	out = MarshalBytes(out, payload)
 	return out
 }
@@ -41,11 +41,11 @@ func UnmarshalPacket(data []byte) (*Packet, []byte) {
 	}
 
 	var packet Packet
-	packet.Magic, data = unmarshalUint32(data)
+	packet.Magic, data = UnmarshalUint32(data)
 	packet.Command, data = UnmarshalFixedStr(data, 12)
 
-	length, data := unmarshalUint32(data)
-	expectedChecksum, data := unmarshalUint32(data)
+	length, data := UnmarshalUint32(data)
+	expectedChecksum, data := UnmarshalUint32(data)
 
 	if len(data) < int(length) {
 		return nil, origData
@@ -74,7 +74,7 @@ func GetTestAddr(n int) net.TCPAddr {
 
 func GetTestConn(n int) net.Conn {
 	tcp := GetTestAddr(n)
-	conn, err := net.DialTimeout("tcp", tcp.String(), time.Millisecond*200)
+	conn, err := net.DialTimeout("tcp", tcp.String(), time.Millisecond*2000)
 	if err != nil {
 		panic(err)
 	}
@@ -99,9 +99,8 @@ func (cl *client) Close() error {
 	return cl.conn.Close()
 }
 func (cl *client) ReadPacket() Packet {
-	// readBuf := make([]byte, 32768)
 	fmt.Println("ReadPacket...")
-	readBuf := make([]byte, 100)
+	readBuf := make([]byte, 2048)
 	for {
 		fmt.Println("Reading...")
 		n, err := cl.conn.Read(readBuf)

@@ -18,7 +18,7 @@ func test4() {
 	fmt.Printf("%+v\n", packet)
 	fmt.Println(AsJSON(packet))
 
-	conn := network.GetTestConn(1)
+	conn := network.GetTestConn(6)
 	client := network.Client(conn)
 	defer client.Close()
 

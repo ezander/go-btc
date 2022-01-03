@@ -16,12 +16,18 @@ func unmarshalMessage(command string, data []byte) (Message, []byte) {
 	switch command {
 	case "version":
 		msg = new(VersionMessage)
+	case "verack":
+		msg = new(VerAckMessage)
+	case "reject":
+		msg = new(RejectMessage)
 	default:
 		panic(fmt.Sprintf("Unknown command to unmarshal: '%s'", command))
 	}
 	data = msg.Unmarshal(data)
 	return msg, data
 }
+
+// ========================================================================
 
 type VersionMessage struct {
 	Version      uint32    // Identifies protocol version being used by the node
@@ -64,15 +70,15 @@ func NewVersionMessage() VersionMessage {
 }
 
 func (v VersionMessage) Marshal(out []byte) []byte {
-	out = marshalUint32(out, v.Version)
-	out = marshalUint64(out, v.Services)
+	out = MarshalUint32(out, v.Version)
+	out = MarshalUint64(out, v.Services)
 	out = MarshalTimestamp(out, v.Timestamp)
 	out = MarshalNetAddr(out, v.ReceiverAddr)
 	if v.Version >= 106 {
 		out = MarshalNetAddr(out, v.FromAddr)
 		out = MarshalNonce(out, v.Nonce)
 		out = MarshalVarStr(out, v.UserAgent)
-		out = marshalUint32(out, v.StartHeight)
+		out = MarshalUint32(out, v.StartHeight)
 	}
 	if v.Version >= 70001 {
 		out = MarshalBool(out, v.Relay)
@@ -81,15 +87,15 @@ func (v VersionMessage) Marshal(out []byte) []byte {
 }
 
 func (msg *VersionMessage) Unmarshal(out []byte) []byte {
-	msg.Version, out = unmarshalUint32(out)
-	msg.Services, out = unmarshalUint64(out)
+	msg.Version, out = UnmarshalUint32(out)
+	msg.Services, out = UnmarshalUint64(out)
 	msg.Timestamp, out = UnmarshalTimestamp(out)
 	msg.ReceiverAddr, out = UnmarshalNetAddr(out)
 	if msg.Version >= 106 {
 		msg.FromAddr, out = UnmarshalNetAddr(out)
 		msg.Nonce, out = UnmarshalNonce(out)
 		msg.UserAgent, out = UnmarshalVarStr(out)
-		msg.StartHeight, out = unmarshalUint32(out)
+		msg.StartHeight, out = UnmarshalUint32(out)
 	}
 	if msg.Version >= 70001 {
 		msg.Relay, out = UnmarshalBool(out)
@@ -97,14 +103,51 @@ func (msg *VersionMessage) Unmarshal(out []byte) []byte {
 	return out
 }
 
-func UnmarshalVersionMessage(out []byte) (VersionMessage, []byte) {
-	msg := VersionMessage{}
-	out = msg.Unmarshal(out)
-	return msg, out
+// ========================================================================
+type VerAckMessage struct {
 }
 
-// type VerackMessage struct {
-// }
+func (v VerAckMessage) Marshal(out []byte) []byte {
+	return out
+}
+
+func (msg *VerAckMessage) Unmarshal(out []byte) []byte {
+	return out
+}
+
+// ========================================================================
+
+const REJECT_MALFORMED uint8 = 0x01
+const REJECT_INVALID uint8 = 0x10
+const REJECT_OBSOLETE uint8 = 0x11
+const REJECT_DUPLICATE uint8 = 0x12
+const REJECT_NONSTANDARD uint8 = 0x40
+const REJECT_DUST uint8 = 0x41
+const REJECT_INSUFFICIENTFEE uint8 = 0x42
+const REJECT_CHECKPOINT uint8 = 0x43
+
+type RejectMessage struct {
+	Message string //	var_str - type of message rejected
+	CCode   uint8  // char - code relating to rejected message
+	Reason  string // var_str - text version of reason for rejection
+	Data    []byte // char - Optional extra data provided by some errors. Currently, all errors which provide this field fill it with the TXID or block header hash of the object being rejected, so the field is 32 bytes.
+}
+
+func (v RejectMessage) Marshal(out []byte) []byte {
+	out = MarshalVarStr(out, v.Message)
+	out = MarshalUint8(out, v.CCode)
+	out = MarshalVarStr(out, v.Reason)
+	out = MarshalBytes(out, v.Data[:])
+	return out
+}
+
+func (msg *RejectMessage) Unmarshal(data []byte) []byte {
+	msg.Message, data = UnmarshalVarStr(data)
+	msg.CCode, data = UnmarshalUint8(data)
+	msg.Reason, data = UnmarshalVarStr(data)
+	msg.Data, data = UnmarshalBytes(data, uint32(len(data)))
+	return data
+}
 
 // type AddrMessage struct {
 // }

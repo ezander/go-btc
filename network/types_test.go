@@ -7,8 +7,8 @@ import (
 
 func TestMarshalUint64(t *testing.T) {
 	var x uint64 = 1234
-	data := marshalUint64([]byte{}, x)
-	y, data := unmarshalUint64(data)
+	data := MarshalUint64([]byte{}, x)
+	y, data := UnmarshalUint64(data)
 	if len(data) > 0 {
 		t.Errorf("Len Data should be zero after unmarshalling (%d)", len(data))
 	}

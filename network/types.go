@@ -18,41 +18,41 @@ type Unmarshaller interface {
 }
 
 // Helper functions for marshalling and unmarshalling integers
-func marshalUint8(out []byte, v uint8) []byte {
+func MarshalUint8(out []byte, v uint8) []byte {
 	return append(out, v)
 }
 
-func unmarshalUint8(data []byte) (uint8, []byte) {
+func UnmarshalUint8(data []byte) (uint8, []byte) {
 	return data[0], data[1:]
 }
 
-func marshalUint16(out []byte, v uint16) []byte {
+func MarshalUint16(out []byte, v uint16) []byte {
 	data := make([]byte, 2)
 	binary.LittleEndian.PutUint16(data, v)
 	return append(out, data...)
 }
 
-func unmarshalUint16(data []byte) (uint16, []byte) {
+func UnmarshalUint16(data []byte) (uint16, []byte) {
 	return binary.LittleEndian.Uint16(data), data[2:]
 }
 
-func marshalUint32(out []byte, v uint32) []byte {
+func MarshalUint32(out []byte, v uint32) []byte {
 	data := make([]byte, 4)
 	binary.LittleEndian.PutUint32(data, v)
 	return append(out, data...)
 }
 
-func unmarshalUint32(data []byte) (uint32, []byte) {
+func UnmarshalUint32(data []byte) (uint32, []byte) {
 	return binary.LittleEndian.Uint32(data), data[4:]
 }
 
-func marshalUint64(out []byte, v uint64) []byte {
+func MarshalUint64(out []byte, v uint64) []byte {
 	data := make([]byte, 8)
 	binary.LittleEndian.PutUint64(data, v)
 	return append(out, data...)
 }
 
-func unmarshalUint64(data []byte) (uint64, []byte) {
+func UnmarshalUint64(data []byte) (uint64, []byte) {
 	return binary.LittleEndian.Uint64(data), data[8:]
 }
 
@@ -60,31 +60,31 @@ func unmarshalUint64(data []byte) (uint64, []byte) {
 func MarshalVarInt(out []byte, v uint64) []byte {
 	switch {
 	case v < 0xFD:
-		return marshalUint8(out, uint8(v))
+		return MarshalUint8(out, uint8(v))
 	case v <= 0xFFFF:
-		return marshalUint16(marshalUint8(out, 0xFD), uint16(v))
+		return MarshalUint16(MarshalUint8(out, 0xFD), uint16(v))
 	case v <= 0xFFFFFFFF:
-		return marshalUint32(marshalUint8(out, 0xFE), uint32(v))
+		return MarshalUint32(MarshalUint8(out, 0xFE), uint32(v))
 	default:
-		return marshalUint64(marshalUint8(out, 0xFF), uint64(v))
+		return MarshalUint64(MarshalUint8(out, 0xFF), uint64(v))
 	}
 }
 
 func UnmarshalVarInt(data []byte) (uint64, []byte) {
 	b := data[0]
 	if b < 0xFD {
-		value, data := unmarshalUint8(data)
+		value, data := UnmarshalUint8(data)
 		return uint64(value), data
 	} else {
 		switch b {
 		case 0xFD:
-			value, data := unmarshalUint16(data[1:])
+			value, data := UnmarshalUint16(data[1:])
 			return uint64(value), data
 		case 0xFE:
-			value, data := unmarshalUint32(data[1:])
+			value, data := UnmarshalUint32(data[1:])
 			return uint64(value), data
 		default:
-			value, data := unmarshalUint64(data[1:])
+			value, data := UnmarshalUint64(data[1:])
 			return uint64(value), data
 		}
 	}
@@ -92,32 +92,32 @@ func UnmarshalVarInt(data []byte) (uint64, []byte) {
 
 func MarshalBool(out []byte, v bool) []byte {
 	if v {
-		return marshalUint8(out, 1)
+		return MarshalUint8(out, 1)
 	} else {
-		return marshalUint8(out, 0)
+		return MarshalUint8(out, 0)
 	}
 }
 
 func UnmarshalBool(data []byte) (bool, []byte) {
-	b, data := unmarshalUint8(data)
+	b, data := UnmarshalUint8(data)
 	return b != 0, data
 }
 
 func MarshalNonce(out []byte, v uint64) []byte {
-	return marshalUint64(out, v)
+	return MarshalUint64(out, v)
 }
 
 func UnmarshalNonce(data []byte) (uint64, []byte) {
-	return unmarshalUint64(data)
+	return UnmarshalUint64(data)
 }
 
 // Timestamps
 func MarshalTimestamp(out []byte, v time.Time) []byte {
-	return marshalUint64(out, uint64(v.Unix()))
+	return MarshalUint64(out, uint64(v.Unix()))
 }
 
 func UnmarshalTimestamp(data []byte) (time.Time, []byte) {
-	value, data := unmarshalUint64(data)
+	value, data := UnmarshalUint64(data)
 	return time.Unix(int64(value), 0), data
 }
 
@@ -179,17 +179,17 @@ type NetAddr struct {
 }
 
 func MarshalNetAddr(out []byte, v NetAddr) []byte {
-	out = marshalUint64(out, v.Services)
+	out = MarshalUint64(out, v.Services)
 	out = MarshalIP(out, v.IPAddr)
-	out = marshalUint16(out, v.Port)
+	out = MarshalUint16(out, v.Port)
 	return out
 }
 
 func UnmarshalNetAddr(out []byte) (NetAddr, []byte) {
 	var v NetAddr
-	v.Services, out = unmarshalUint64(out)
+	v.Services, out = UnmarshalUint64(out)
 	v.IPAddr, out = UnmarshalIP(out)
-	v.Port, out = unmarshalUint16(out)
+	v.Port, out = UnmarshalUint16(out)
 	return v, out
 }
 
