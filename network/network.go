@@ -1,5 +1,11 @@
 package network
 
+import (
+	"fmt"
+	"net"
+	"time"
+)
+
 type Packet struct {
 	Magic   uint32
 	Command string
@@ -28,13 +34,22 @@ func MarshalPacket(out []byte, packet Packet) []byte {
 	return out
 }
 
-func UnmarshalPacket(data []byte) (Packet, []byte) {
+func UnmarshalPacket(data []byte) (*Packet, []byte) {
+	origData := data
+	if len(data) < 4+12+4+4 {
+		return nil, origData
+	}
+
 	var packet Packet
 	packet.Magic, data = unmarshalUint32(data)
 	packet.Command, data = UnmarshalFixedStr(data, 12)
 
 	length, data := unmarshalUint32(data)
 	expectedChecksum, data := unmarshalUint32(data)
+
+	if len(data) < int(length) {
+		return nil, origData
+	}
 	payload, data := UnmarshalBytes(data, length)
 
 	actualPayload := checksum(payload)
@@ -45,5 +60,67 @@ func UnmarshalPacket(data []byte) (Packet, []byte) {
 	message, data := unmarshalMessage(packet.Command, payload)
 	packet.Message = message
 
-	return packet, data
+	return &packet, data
+}
+
+func GetTestAddr(n int) net.TCPAddr {
+	// https://bitcoin.stackexchange.com/questions/49634/testnet-peers-list-with-ip-addresses
+	// dig A testnet-seed.bitcoin.jonasschnelli.ch
+
+	ips, _ := net.LookupIP("testnet-seed.bitcoin.jonasschnelli.ch")
+
+	return net.TCPAddr{IP: ips[n], Port: 18333, Zone: ""}
+}
+
+func GetTestConn(n int) net.Conn {
+	tcp := GetTestAddr(n)
+	conn, err := net.DialTimeout("tcp", tcp.String(), time.Millisecond*200)
+	if err != nil {
+		panic(err)
+	}
+	// conn.SetDeadline(time.Now().Add(time.Second * 2))
+	// fmt.Println(conn, err)
+	return conn
+}
+
+type client struct {
+	conn   net.Conn
+	buffer []byte
+	ready  bool
+}
+
+func Client(netConn net.Conn) client {
+	return client{
+		conn:   netConn,
+		buffer: []byte{},
+	}
+}
+func (cl *client) Close() error {
+	return cl.conn.Close()
+}
+func (cl *client) ReadPacket() Packet {
+	// readBuf := make([]byte, 32768)
+	fmt.Println("ReadPacket...")
+	readBuf := make([]byte, 100)
+	for {
+		fmt.Println("Reading...")
+		n, err := cl.conn.Read(readBuf)
+		fmt.Println(n, err)
+		if err != nil {
+			panic(err)
+		}
+		cl.buffer = append(cl.buffer, readBuf[:n]...)
+		packet, buffer := UnmarshalPacket(cl.buffer)
+		if packet != nil {
+			cl.buffer = buffer
+			return *packet
+		}
+	}
+}
+func (cl *client) SendPacket(packet Packet) {
+	out := MarshalPacket(nil, packet)
+	_, err := cl.conn.Write(out)
+	if err != nil {
+		panic(err)
+	}
 }

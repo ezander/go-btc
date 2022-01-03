@@ -2,49 +2,33 @@ package main
 
 import (
 	"bitcoin/network"
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net"
-	"time"
 )
 
-func test3() {
-	// https://bitcoin.stackexchange.com/questions/49634/testnet-peers-list-with-ip-addresses
-	// dig A testnet-seed.bitcoin.jonasschnelli.ch
+func AsJSON(object interface{}) string {
+	json, _ := json.MarshalIndent(object, "", "\t")
+	return string(json)
+}
 
-	ips, _ := net.LookupIP("testnet-seed.bitcoin.jonasschnelli.ch")
-
-	tcp := net.TCPAddr{IP: ips[0], Port: 18333, Zone: ""}
-	conn, err := net.Dial("tcp", tcp.String())
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Close()
-	fmt.Println(conn, err)
-	conn.SetDeadline(time.Now().Add(time.Second * 2))
+func test4() {
 
 	vermsg := network.NewVersionMessage()
-	var msg = network.CreatePacket(network.MAGIC_testnet3, "version", &vermsg)
+	var packet = network.CreatePacket(network.MAGIC_testnet3, "version", &vermsg)
+	fmt.Printf("%+v\n", packet)
+	fmt.Println(AsJSON(packet))
 
-	out := network.MarshalPacket(nil, msg)
-	fmt.Printf("%+v\n", msg.Message)
-	// fmt.Println(out)
+	conn := network.GetTestConn(1)
+	client := network.Client(conn)
+	defer client.Close()
 
-	_, err = conn.Write(out)
-	if err != nil {
-		panic(err)
-	}
+	client.SendPacket(packet)
+	retmsg := client.ReadPacket()
 
-	in, err := ioutil.ReadAll(conn)
-	if err != nil {
-		fmt.Println(err) // i/o timeout is okay...
-	}
-
-	retmsg, _ := network.UnmarshalPacket(in)
-	fmt.Printf("%+v\n", retmsg.Message)
-
+	fmt.Printf("%+v\n", retmsg)
+	fmt.Println(AsJSON(retmsg))
 }
 
 func main() {
-	test3()
+	test4()
 }
