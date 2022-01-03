@@ -12,21 +12,17 @@ func AsJSON(object interface{}) string {
 }
 
 func test4() {
-
-	vermsg := network.NewVersionMessage()
-	var packet = network.CreatePacket(network.MAGIC_testnet3, "version", &vermsg)
-	fmt.Printf("%+v\n", packet)
-	fmt.Println(AsJSON(packet))
-
 	conn := network.GetTestConn(6)
 	client := network.Client(conn)
 	defer client.Close()
 
+	vermsg := network.NewVersionMessage()
+	var packet = network.CreatePacket(network.MAGIC_testnet3, "version", &vermsg)
+	fmt.Println("Sending: ", AsJSON(packet))
 	client.SendPacket(packet)
 	retmsg := client.ReadPacket()
+	fmt.Println("Received: ", AsJSON(retmsg))
 
-	fmt.Printf("%+v\n", retmsg)
-	fmt.Println(AsJSON(retmsg))
 }
 
 func main() {

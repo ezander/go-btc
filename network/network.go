@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"net"
 	"time"
 )
@@ -99,12 +98,12 @@ func (cl *client) Close() error {
 	return cl.conn.Close()
 }
 func (cl *client) ReadPacket() Packet {
-	fmt.Println("ReadPacket...")
+	// fmt.Println("ReadPacket...")
 	readBuf := make([]byte, 2048)
 	for {
-		fmt.Println("Reading...")
+		// fmt.Println("Reading...")
 		n, err := cl.conn.Read(readBuf)
-		fmt.Println(n, err)
+		// fmt.Println(n, err)
 		if err != nil {
 			panic(err)
 		}
