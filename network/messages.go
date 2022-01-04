@@ -68,7 +68,9 @@ const NODE_NETWORK_LIMITED = 1024 // 	See BIP 0159
 func NewVersionMessage() *VersionMessage {
 
 	msg := VersionMessage{
-		Version:      31800,
+		// Version:      31800,
+		// Version:      70015,
+		Version:      70011,
 		Services:     NODE_NETWORK,
 		Timestamp:    time.Now().Truncate(time.Second),
 		ReceiverAddr: NetAddr{NODE_NETWORK, net.IPv4(127, 0, 0, 1), 8333},

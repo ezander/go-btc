@@ -22,14 +22,10 @@ func test4() {
 	fmt.Println("Received: ", command, AsJSON(retmsg))
 
 	client.SendMessage(&network.VerAckMessage{})
-	retmsg, command = client.ReceiveMessage()
-	fmt.Println("Received: ", command, AsJSON(retmsg))
-
-	retmsg, command = client.ReceiveMessage()
-	fmt.Println("Received: ", command, AsJSON(retmsg))
-
-	retmsg, command = client.ReceiveMessage()
-	fmt.Println("Received: ", command, AsJSON(retmsg))
+	for {
+		retmsg, command = client.ReceiveMessage()
+		fmt.Println("Received: ", command, AsJSON(retmsg))
+	}
 }
 
 func main() {

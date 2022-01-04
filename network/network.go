@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"strings"
 	"time"
 )
 
@@ -43,6 +42,23 @@ func MarshalPacket(out []byte, packet Packet) []byte {
 	return out
 }
 
+func cleanString(in []byte) string {
+	out := make([]byte, len(in))
+	for i, c := range in {
+		out[i] = c
+		if c < ' ' || c > 0x7F {
+			out[i] = '.'
+		}
+	}
+	return string(out)
+}
+func hexPrinter(in []byte) {
+	l := 16
+	for start := 0; start < len(in); start += l {
+		fmt.Printf("0x%04X  % x  %s\n", start, in[start:start+l], cleanString(in[start:start+l]))
+	}
+}
+
 func UnmarshalPacket(data []byte, expectedMagic uint32) (*Packet, []byte) {
 	origData := data
 	if len(data) < 4+12+4+4 {
@@ -52,8 +68,8 @@ func UnmarshalPacket(data []byte, expectedMagic uint32) (*Packet, []byte) {
 	var packet Packet
 	packet.Magic, data = UnmarshalUint32(data)
 	if expectedMagic != 0 && packet.Magic != expectedMagic {
-
-		fmt.Printf("Warning: Magic number mismatch (%x!=%x) in [% x]/'%s'\n\n", expectedMagic, packet.Magic, origData, strings.ToValidUTF8(string(origData), "."))
+		fmt.Printf("Warning: Magic number mismatch (%x!=%x)'\n", expectedMagic, packet.Magic)
+		hexPrinter(origData)
 	}
 
 	packet.Command, data = UnmarshalFixedStr(data, 12)
@@ -101,21 +117,22 @@ func (cl *client) Close() error {
 }
 
 func (cl *client) ReadPacket() Packet {
-	// fmt.Println("ReadPacket...")
 	readBuf := make([]byte, 2048)
 	for {
-		// fmt.Println("Reading...")
-		n, err := cl.conn.Read(readBuf)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Printf("Read %d bytes...", n)
-		cl.buffer = append(cl.buffer, readBuf[:n]...)
+		// See whether we have a complete packet in our buffer
 		packet, buffer := UnmarshalPacket(cl.buffer, cl.magic)
 		if packet != nil {
 			cl.buffer = buffer
 			return *packet
 		}
+
+		// Otherwise keep on reading from the tcp stream
+		n, err := cl.conn.Read(readBuf)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("Read %d bytes...\n", n)
+		cl.buffer = append(cl.buffer, readBuf[:n]...)
 	}
 }
 
@@ -127,14 +144,14 @@ func (cl *client) SendPacket(packet Packet) {
 	}
 }
 
-func (cl client) SendMessage(message Message) {
+func (cl *client) SendMessage(message Message) {
 	command := message.GetCommandString()
 	packet := CreatePacket(cl.magic, command, message)
 	fmt.Println("Sending: ", AsJSON(packet))
 	cl.SendPacket(packet)
 }
 
-func (cl client) ReceiveMessage() (*Message, string) {
+func (cl *client) ReceiveMessage() (*Message, string) {
 	packet := cl.ReadPacket()
 	if cl.magic != packet.Magic {
 		fmt.Printf("Warning: magic bytes did not match: %x != %x\n", cl.magic, packet.Magic)
