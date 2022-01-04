@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -42,7 +43,7 @@ func MarshalPacket(out []byte, packet Packet) []byte {
 	return out
 }
 
-func UnmarshalPacket(data []byte) (*Packet, []byte) {
+func UnmarshalPacket(data []byte, expectedMagic uint32) (*Packet, []byte) {
 	origData := data
 	if len(data) < 4+12+4+4 {
 		return nil, origData
@@ -50,6 +51,11 @@ func UnmarshalPacket(data []byte) (*Packet, []byte) {
 
 	var packet Packet
 	packet.Magic, data = UnmarshalUint32(data)
+	if expectedMagic != 0 && packet.Magic != expectedMagic {
+
+		fmt.Printf("Warning: Magic number mismatch (%x!=%x) in [% x]/'%s'\n\n", expectedMagic, packet.Magic, origData, strings.ToValidUTF8(string(origData), "."))
+	}
+
 	packet.Command, data = UnmarshalFixedStr(data, 12)
 
 	length, data := UnmarshalUint32(data)
@@ -60,13 +66,16 @@ func UnmarshalPacket(data []byte) (*Packet, []byte) {
 	}
 	payload, data := UnmarshalBytes(data, length)
 
-	actualPayload := checksum(payload)
-	if expectedChecksum != actualPayload {
-		panic("Checksums don't match")
+	actualChecksum := checksum(payload)
+	if expectedChecksum != actualChecksum {
+		fmt.Printf("Warning: Checksums don't match (%x!=%x) in %v\n", expectedChecksum, actualChecksum, packet.Command)
 	}
 
-	message, data := unmarshalMessage(packet.Command, payload)
+	message, payload := unmarshalMessage(packet.Command, payload)
 	packet.Message = message
+	if len(payload) > 0 {
+		fmt.Printf("Warning: payload in message '%v' not fully used.", packet.Command)
+	}
 
 	return &packet, data
 }
@@ -97,12 +106,12 @@ func (cl *client) ReadPacket() Packet {
 	for {
 		// fmt.Println("Reading...")
 		n, err := cl.conn.Read(readBuf)
-		// fmt.Println(n, err)
 		if err != nil {
 			panic(err)
 		}
+		fmt.Printf("Read %d bytes...", n)
 		cl.buffer = append(cl.buffer, readBuf[:n]...)
-		packet, buffer := UnmarshalPacket(cl.buffer)
+		packet, buffer := UnmarshalPacket(cl.buffer, cl.magic)
 		if packet != nil {
 			cl.buffer = buffer
 			return *packet
@@ -136,7 +145,7 @@ func (cl client) ReceiveMessage() (*Message, string) {
 // ================================================================================================
 func GetPeerAddress(seed string, port, n int) net.TCPAddr {
 	ips, _ := net.LookupIP(seed)
-	return net.TCPAddr{IP: ips[n], Port: 18333, Zone: ""}
+	return net.TCPAddr{IP: ips[n], Port: port, Zone: ""}
 }
 
 func GetConnection(seed string, port int, n int) net.Conn {

@@ -113,7 +113,14 @@ func UnmarshalTimestamp(data []byte) (time.Time, []byte) {
 	return time.Unix(int64(value), 0), data
 }
 
-// todo: Marshal and Unmarshal Timestamp4
+func MarshalTimestamp4(out []byte, v time.Time) []byte {
+	return MarshalUint32(out, uint32(v.Unix()))
+}
+
+func UnmarshalTimestamp4(data []byte) (time.Time, []byte) {
+	value, data := UnmarshalUint32(data)
+	return time.Unix(int64(value), 0), data
+}
 
 // String types
 
@@ -159,15 +166,20 @@ func MarshalIP(out []byte, v net.IP) []byte {
 	return MarshalBytes(out, bytes)
 }
 
-func UnmarshalIP(out []byte) (net.IP, []byte) {
-	bytes, out := UnmarshalBytes(out, 16)
-	return net.IP(bytes), out
+func UnmarshalIP(data []byte) (net.IP, []byte) {
+	bytes, data := UnmarshalBytes(data, 16)
+	return net.IP(bytes), data
 }
 
 type NetAddr struct {
 	Services uint64
 	IPAddr   net.IP
 	Port     uint16
+}
+
+func (addr NetAddr) String() string {
+	type _NetAddr NetAddr
+	return fmt.Sprintf("%+v", _NetAddr(addr))
 }
 
 func MarshalNetAddr(out []byte, v NetAddr) []byte {
@@ -177,21 +189,33 @@ func MarshalNetAddr(out []byte, v NetAddr) []byte {
 	return out
 }
 
-func UnmarshalNetAddr(out []byte) (NetAddr, []byte) {
+func UnmarshalNetAddr(data []byte) (NetAddr, []byte) {
 	var v NetAddr
-	v.Services, out = UnmarshalUint64(out)
-	v.IPAddr, out = UnmarshalIP(out)
-	v.Port, out = UnmarshalUint16(out)
-	return v, out
+	v.Services, data = UnmarshalUint64(data)
+	v.IPAddr, data = UnmarshalIP(data)
+	v.Port, data = UnmarshalUint16(data)
+	return v, data
 }
 
-// type TimestampedNetAddr struct {
-// 	Time time.Time
-// 	NetAddr
-// }
+func (addr TimeNetAddr) String() string {
+	type _TimeNetAddr TimeNetAddr
+	return fmt.Sprintf("%+v", _TimeNetAddr(addr))
+}
 
-// func (v TimestampedNetAddr) Marshal(out []byte) []byte {
-// 	out = MarshalTimestamp(out, v.Time)
-// 	out = v.NetAddr.Marshal(out)
-// 	return out
-// }
+type TimeNetAddr struct {
+	Time time.Time
+	NetAddr
+}
+
+func MarshalTimeNetAddr(out []byte, v TimeNetAddr) []byte {
+	out = MarshalTimestamp4(out, v.Time)
+	out = MarshalNetAddr(out, v.NetAddr)
+	return out
+}
+
+func UnmarshalTimeNetAddr(data []byte) (TimeNetAddr, []byte) {
+	var v TimeNetAddr
+	v.Time, data = UnmarshalTimestamp4(data)
+	v.NetAddr, data = UnmarshalNetAddr(data)
+	return v, data
+}

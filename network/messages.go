@@ -25,6 +25,10 @@ func unmarshalMessage(command string, data []byte) (Message, []byte) {
 		msg = new(PingMessage)
 	case "pong":
 		msg = new(PongMessage)
+	case "alert":
+		msg = new(AlertMessage)
+	case "addr":
+		msg = new(AddrMessage)
 	default:
 		panic(fmt.Sprintf("Unknown command to unmarshal: '%s'", command))
 	}
@@ -209,5 +213,51 @@ func (msg PongMessage) GetCommandString() string {
 	return "pong"
 }
 
-// type AddrMessage struct {
-// }
+// ========================================================================
+type AlertMessage struct {
+	Payload   []byte
+	Signature []byte
+}
+
+func (msg AlertMessage) Marshal(out []byte) []byte {
+	panic("I ain't gonna send no alert message (see https://bitcoin.org/en/alert/2016-11-01-alert-retirement) ")
+}
+
+func (msg *AlertMessage) Unmarshal(data []byte) []byte {
+	// l := len(data)
+	// lp := l -
+	// 04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284
+	// (hash) 1AGRxqDa5WjUKBwHB9XYEjmkv1ucoUUy1s
+	msg.Payload, data = UnmarshalBytes(data, uint32(len(data)))
+	return data
+}
+
+func (msg AlertMessage) GetCommandString() string {
+	return "alert"
+}
+
+// ========================================================================
+type AddrMessage struct {
+	AddrList []TimeNetAddr
+}
+
+func (msg AddrMessage) Marshal(out []byte) []byte {
+	out = MarshalVarInt(out, uint64(len(msg.AddrList)))
+	for i := range msg.AddrList {
+		out = MarshalTimeNetAddr(out, msg.AddrList[i])
+	}
+	return out
+}
+
+func (msg *AddrMessage) Unmarshal(data []byte) []byte {
+	count, data := UnmarshalVarInt(data)
+	msg.AddrList = make([]TimeNetAddr, count)
+	for i := range msg.AddrList {
+		msg.AddrList[i], data = UnmarshalTimeNetAddr(data)
+	}
+	return data
+}
+
+func (msg AddrMessage) GetCommandString() string {
+	return "addr"
+}

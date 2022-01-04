@@ -12,7 +12,8 @@ func AsJSON(object interface{}) string {
 }
 
 func test4() {
-	client := network.TestClient(6)
+	// client := network.TestClient(6)
+	client := network.TestClient(5)
 	defer client.Close()
 
 	var vermsg network.Message = network.NewVersionMessage()
@@ -21,6 +22,12 @@ func test4() {
 	fmt.Println("Received: ", command, AsJSON(retmsg))
 
 	client.SendMessage(&network.VerAckMessage{})
+	retmsg, command = client.ReceiveMessage()
+	fmt.Println("Received: ", command, AsJSON(retmsg))
+
+	retmsg, command = client.ReceiveMessage()
+	fmt.Println("Received: ", command, AsJSON(retmsg))
+
 	retmsg, command = client.ReceiveMessage()
 	fmt.Println("Received: ", command, AsJSON(retmsg))
 }
