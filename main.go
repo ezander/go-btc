@@ -16,11 +16,18 @@ func test4() {
 	client := network.Client(conn)
 	defer client.Close()
 
-	vermsg := network.NewVersionMessage()
-	var packet = network.CreatePacket(network.MAGIC_testnet3, "version", &vermsg)
+	var vermsg network.Message = network.NewVersionMessage()
+	var packet = network.CreatePacket(network.MAGIC_testnet3, "version", vermsg)
 	fmt.Println("Sending: ", AsJSON(packet))
 	client.SendPacket(packet)
 	retmsg := client.ReadPacket()
+	fmt.Println("Received: ", AsJSON(retmsg))
+
+	vermsg = &network.VerAckMessage{}
+	packet = network.CreatePacket(network.MAGIC_testnet3, "verack", vermsg)
+	fmt.Println("Sending: ", AsJSON(packet))
+	client.SendPacket(packet)
+	retmsg = client.ReadPacket()
 	fmt.Println("Received: ", AsJSON(retmsg))
 
 }

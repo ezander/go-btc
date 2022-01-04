@@ -53,7 +53,7 @@ const NODE_XTHIN = 16             // 	Never formally proposed (as a BIP), and di
 const NODE_COMPACT_FILTERS = 64   // 	See BIP 0157
 const NODE_NETWORK_LIMITED = 1024 // 	See BIP 0159
 
-func NewVersionMessage() VersionMessage {
+func NewVersionMessage() *VersionMessage {
 
 	msg := VersionMessage{
 		Version:      31800,
@@ -66,7 +66,7 @@ func NewVersionMessage() VersionMessage {
 		StartHeight:  1,
 		Relay:        false,
 	}
-	return msg
+	return &msg
 }
 
 func (v VersionMessage) Marshal(out []byte) []byte {
