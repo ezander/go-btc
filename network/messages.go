@@ -21,6 +21,10 @@ func unmarshalMessage(command string, data []byte) (Message, []byte) {
 		msg = new(VerAckMessage)
 	case "reject":
 		msg = new(RejectMessage)
+	case "ping":
+		msg = new(PingMessage)
+	case "pong":
+		msg = new(PongMessage)
 	default:
 		panic(fmt.Sprintf("Unknown command to unmarshal: '%s'", command))
 	}
@@ -73,38 +77,38 @@ func NewVersionMessage() *VersionMessage {
 	return &msg
 }
 
-func (v VersionMessage) Marshal(out []byte) []byte {
-	out = MarshalUint32(out, v.Version)
-	out = MarshalUint64(out, v.Services)
-	out = MarshalTimestamp(out, v.Timestamp)
-	out = MarshalNetAddr(out, v.ReceiverAddr)
-	if v.Version >= 106 {
-		out = MarshalNetAddr(out, v.FromAddr)
-		out = MarshalNonce(out, v.Nonce)
-		out = MarshalVarStr(out, v.UserAgent)
-		out = MarshalUint32(out, v.StartHeight)
+func (msg VersionMessage) Marshal(out []byte) []byte {
+	out = MarshalUint32(out, msg.Version)
+	out = MarshalUint64(out, msg.Services)
+	out = MarshalTimestamp(out, msg.Timestamp)
+	out = MarshalNetAddr(out, msg.ReceiverAddr)
+	if msg.Version >= 106 {
+		out = MarshalNetAddr(out, msg.FromAddr)
+		out = MarshalUint64(out, msg.Nonce)
+		out = MarshalVarStr(out, msg.UserAgent)
+		out = MarshalUint32(out, msg.StartHeight)
 	}
-	if v.Version >= 70001 {
-		out = MarshalBool(out, v.Relay)
+	if msg.Version >= 70001 {
+		out = MarshalBool(out, msg.Relay)
 	}
 	return out
 }
 
-func (msg *VersionMessage) Unmarshal(out []byte) []byte {
-	msg.Version, out = UnmarshalUint32(out)
-	msg.Services, out = UnmarshalUint64(out)
-	msg.Timestamp, out = UnmarshalTimestamp(out)
-	msg.ReceiverAddr, out = UnmarshalNetAddr(out)
+func (msg *VersionMessage) Unmarshal(data []byte) []byte {
+	msg.Version, data = UnmarshalUint32(data)
+	msg.Services, data = UnmarshalUint64(data)
+	msg.Timestamp, data = UnmarshalTimestamp(data)
+	msg.ReceiverAddr, data = UnmarshalNetAddr(data)
 	if msg.Version >= 106 {
-		msg.FromAddr, out = UnmarshalNetAddr(out)
-		msg.Nonce, out = UnmarshalNonce(out)
-		msg.UserAgent, out = UnmarshalVarStr(out)
-		msg.StartHeight, out = UnmarshalUint32(out)
+		msg.FromAddr, data = UnmarshalNetAddr(data)
+		msg.Nonce, data = UnmarshalUint64(data)
+		msg.UserAgent, data = UnmarshalVarStr(data)
+		msg.StartHeight, data = UnmarshalUint32(data)
 	}
 	if msg.Version >= 70001 {
-		msg.Relay, out = UnmarshalBool(out)
+		msg.Relay, data = UnmarshalBool(data)
 	}
-	return out
+	return data
 }
 
 func (msg VersionMessage) GetCommandString() string {
@@ -115,12 +119,12 @@ func (msg VersionMessage) GetCommandString() string {
 type VerAckMessage struct {
 }
 
-func (v VerAckMessage) Marshal(out []byte) []byte {
+func (msg VerAckMessage) Marshal(out []byte) []byte {
 	return out
 }
 
-func (msg *VerAckMessage) Unmarshal(out []byte) []byte {
-	return out
+func (msg *VerAckMessage) Unmarshal(data []byte) []byte {
+	return data
 }
 
 func (msg VerAckMessage) GetCommandString() string {
@@ -145,11 +149,11 @@ type RejectMessage struct {
 	Data    []byte // char - Optional extra data provided by some errors. Currently, all errors which provide this field fill it with the TXID or block header hash of the object being rejected, so the field is 32 bytes.
 }
 
-func (v RejectMessage) Marshal(out []byte) []byte {
-	out = MarshalVarStr(out, v.Message)
-	out = MarshalUint8(out, v.CCode)
-	out = MarshalVarStr(out, v.Reason)
-	out = MarshalBytes(out, v.Data[:])
+func (msg RejectMessage) Marshal(out []byte) []byte {
+	out = MarshalVarStr(out, msg.Message)
+	out = MarshalUint8(out, msg.CCode)
+	out = MarshalVarStr(out, msg.Reason)
+	out = MarshalBytes(out, msg.Data[:])
 	return out
 }
 
@@ -163,6 +167,46 @@ func (msg *RejectMessage) Unmarshal(data []byte) []byte {
 
 func (msg RejectMessage) GetCommandString() string {
 	return "reject"
+}
+
+// ========================================================================
+type PingMessage struct {
+	Nonce uint64
+}
+
+func (msg PingMessage) Marshal(out []byte) []byte {
+	out = MarshalUint64(out, msg.Nonce)
+	return out
+}
+
+func (msg *PingMessage) Unmarshal(data []byte) []byte {
+	if len(data) >= 8 {
+		msg.Nonce, data = UnmarshalUint64(data)
+	}
+	return data
+}
+
+func (msg PingMessage) GetCommandString() string {
+	return "ping"
+}
+
+// ========================================================================
+type PongMessage struct {
+	Nonce uint64
+}
+
+func (msg PongMessage) Marshal(out []byte) []byte {
+	out = MarshalUint64(out, msg.Nonce)
+	return out
+}
+
+func (msg *PongMessage) Unmarshal(data []byte) []byte {
+	msg.Nonce, data = UnmarshalUint64(data)
+	return data
+}
+
+func (msg PongMessage) GetCommandString() string {
+	return "pong"
 }
 
 // type AddrMessage struct {

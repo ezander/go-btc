@@ -103,14 +103,6 @@ func UnmarshalBool(data []byte) (bool, []byte) {
 	return b != 0, data
 }
 
-func MarshalNonce(out []byte, v uint64) []byte {
-	return MarshalUint64(out, v)
-}
-
-func UnmarshalNonce(data []byte) (uint64, []byte) {
-	return UnmarshalUint64(data)
-}
-
 // Timestamps
 func MarshalTimestamp(out []byte, v time.Time) []byte {
 	return MarshalUint64(out, uint64(v.Unix()))
