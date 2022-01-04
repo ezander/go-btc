@@ -19,10 +19,15 @@ Some possibly helpful links...
 ### Bitcoin
 
 * Bitcoin protocol: https://en.bitcoin.it/wiki/Protocol_documentation#Common_standards
+* Bitcoin dev guide: https://developer.bitcoin.org/devguide/block_chain.html
 * Bitcoin dev reference: https://developer.bitcoin.org/reference/rpc/
 * Bitcoin nodes: https://bitnodes.io/
+* The Bitcoin book: https://github.com/bitcoinbook/bitcoinbook#chapters
+    - Chapter 8 (network): https://github.com/bitcoinbook/bitcoinbook/blob/develop/ch08.asciidoc
+* Bitcoin core source on github: https://github.com/bitcoin/bitcoin
 
 ### Go
 * Go language spec: https://go.dev/ref/spec
 * Go standard lib: https://pkg.go.dev/std
 * A tour of go: https://go.dev/tour/welcome/1
+* The Go language FAQ: https://go.dev/doc/faq
