@@ -2,6 +2,7 @@ package network
 
 import (
 	"net"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -18,7 +19,7 @@ func TestMarshalUint8(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len of data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y != x {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y, x)
 		}
 	}
@@ -36,7 +37,7 @@ func TestMarshalUint16(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len of data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y != x {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y, x)
 		}
 	}
@@ -54,7 +55,7 @@ func TestMarshalUint32(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len of data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y != x {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y, x)
 		}
 	}
@@ -72,7 +73,7 @@ func TestMarshalUint64(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len of data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y != x {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y, x)
 		}
 	}
@@ -90,7 +91,7 @@ func TestMarshalVarInt(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len Data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y != x {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y, x)
 		}
 	}
@@ -108,7 +109,7 @@ func TestMarshalBool(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len Data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y != x {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y, x)
 		}
 	}
@@ -128,7 +129,7 @@ func TestMarshalTimestamp(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len of data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y != x {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y.String(), x.String())
 		}
 	}
@@ -148,7 +149,7 @@ func TestMarshalTimestamp4(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len of data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y != x {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y.String(), x.String())
 		}
 	}
@@ -166,7 +167,7 @@ func TestMarshalVarString(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len Data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y != x {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y, x)
 		}
 	}
@@ -183,7 +184,7 @@ func TestMarshalFixedString(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len Data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y != x {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y, x)
 		}
 	}
@@ -201,7 +202,7 @@ func TestMarshalBytes(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len Data should be zero after unmarshalling (%d)", len(data))
 		}
-		if string(y) != string(x) {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y, x)
 		}
 	}
@@ -219,7 +220,7 @@ func TestMarshalIP(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len of data should be zero after unmarshalling (%d)", len(data))
 		}
-		if string(y) != string(x) {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y.String(), x.String())
 		}
 	}
@@ -237,7 +238,7 @@ func TestNetAddr(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len of data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y.String() != x.String() {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y.String(), x.String())
 		}
 	}
@@ -255,7 +256,7 @@ func TestTimeNetAddr(t *testing.T) {
 		if len(data) > 0 {
 			t.Errorf("Len of data should be zero after unmarshalling (%d)", len(data))
 		}
-		if y.String() != x.String() {
+		if !reflect.DeepEqual(y, x) {
 			t.Errorf("Unmarshalled data did not match (%v!=%v)", y.String(), x.String())
 		}
 	}
