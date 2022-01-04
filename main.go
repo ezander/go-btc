@@ -14,12 +14,15 @@ func AsJSON(object interface{}) string {
 
 func test4() {
 	numptr := flag.Int("ip", 0, "take n-th discovered ip address")
+	versionptr := flag.Int("pver", 70015, "pretend to have that protocol version")
 	flag.Parse()
 
 	client := network.TestClient(*numptr)
 	defer client.Close()
 
-	var vermsg network.Message = network.NewVersionMessage()
+	var vermsg = network.NewVersionMessage()
+	vermsg.Version = uint32(*versionptr)
+
 	client.SendMessage(vermsg)
 	retmsg, command := client.ReceiveMessage()
 	fmt.Println("Received: ", command, AsJSON(retmsg))
