@@ -1,21 +1,30 @@
 package network
 
 import (
+	"encoding/json"
+	"fmt"
 	"net"
 	"time"
 )
+
+func AsJSON(object interface{}) string {
+	json, _ := json.MarshalIndent(object, "", "\t")
+	return string(json)
+}
+
+const MAGIC_main uint32 = 0xD9B4BEF9
+const MAGIC_testnet uint32 = 0xDAB5BFFA
+const MAGIC_testnet3 uint32 = 0x0709110B
+const MAGIC_signet uint32 = 0x40CF030A
+const MAGIC_namecoin uint32 = 0xFEB4BEF9
+
+// ======================================================================
 
 type Packet struct {
 	Magic   uint32
 	Command string
 	Message Message
 }
-
-const MAGIC_main = 0xD9B4BEF9
-const MAGIC_testnet = 0xDAB5BFFA
-const MAGIC_testnet3 = 0x0709110B
-const MAGIC_signet = 0x40CF030A
-const MAGIC_namecoin = 0xFEB4BEF9
 
 func CreatePacket(magic uint32, command string, msg Message) Packet {
 	message := Packet{magic, command, msg}
@@ -62,41 +71,26 @@ func UnmarshalPacket(data []byte) (*Packet, []byte) {
 	return &packet, data
 }
 
-func GetTestAddr(n int) net.TCPAddr {
-	// https://bitcoin.stackexchange.com/questions/49634/testnet-peers-list-with-ip-addresses
-	// dig A testnet-seed.bitcoin.jonasschnelli.ch
-
-	ips, _ := net.LookupIP("testnet-seed.bitcoin.jonasschnelli.ch")
-
-	return net.TCPAddr{IP: ips[n], Port: 18333, Zone: ""}
-}
-
-func GetTestConn(n int) net.Conn {
-	tcp := GetTestAddr(n)
-	conn, err := net.DialTimeout("tcp", tcp.String(), time.Millisecond*2000)
-	if err != nil {
-		panic(err)
-	}
-	// conn.SetDeadline(time.Now().Add(time.Second * 2))
-	// fmt.Println(conn, err)
-	return conn
-}
+// ======================================================================
 
 type client struct {
 	conn   net.Conn
+	magic  uint32
 	buffer []byte
-	ready  bool
 }
 
-func Client(netConn net.Conn) client {
+func Client(netConn net.Conn, magic uint32) client {
 	return client{
 		conn:   netConn,
+		magic:  magic,
 		buffer: []byte{},
 	}
 }
+
 func (cl *client) Close() error {
 	return cl.conn.Close()
 }
+
 func (cl *client) ReadPacket() Packet {
 	// fmt.Println("ReadPacket...")
 	readBuf := make([]byte, 2048)
@@ -115,10 +109,55 @@ func (cl *client) ReadPacket() Packet {
 		}
 	}
 }
+
 func (cl *client) SendPacket(packet Packet) {
 	out := MarshalPacket(nil, packet)
 	_, err := cl.conn.Write(out)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (cl client) SendMessage(message Message) {
+	command := message.GetCommandString()
+	packet := CreatePacket(cl.magic, command, message)
+	fmt.Println("Sending: ", AsJSON(packet))
+	cl.SendPacket(packet)
+}
+
+func (cl client) ReceiveMessage() (*Message, string) {
+	packet := cl.ReadPacket()
+	if cl.magic != packet.Magic {
+		fmt.Printf("Warning: magic bytes did not match: %x != %x\n", cl.magic, packet.Magic)
+	}
+	return &packet.Message, packet.Command
+}
+
+// ================================================================================================
+func GetPeerAddress(seed string, port, n int) net.TCPAddr {
+	ips, _ := net.LookupIP(seed)
+	return net.TCPAddr{IP: ips[n], Port: 18333, Zone: ""}
+}
+
+func GetConnection(seed string, port int, n int) net.Conn {
+	tcp := GetPeerAddress(seed, port, n)
+	conn, err := net.DialTimeout("tcp", tcp.String(), time.Millisecond*2000)
+	if err != nil {
+		panic(err)
+	}
+	// fmt.Println(conn, err)
+	return conn
+}
+
+// ==============================================================================================
+
+func TestClient(n int) client {
+	// https://bitcoin.stackexchange.com/questions/49634/testnet-peers-list-with-ip-addresses
+	// dig A testnet-seed.bitcoin.jonasschnelli.ch
+
+	seed := "testnet-seed.bitcoin.jonasschnelli.ch"
+	port := 18333
+
+	conn := GetConnection(seed, port, n)
+	return Client(conn, MAGIC_testnet3)
 }

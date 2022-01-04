@@ -9,6 +9,7 @@ import (
 type Message interface {
 	Marshaller
 	Unmarshaller
+	GetCommandString() string
 }
 
 func unmarshalMessage(command string, data []byte) (Message, []byte) {
@@ -22,6 +23,9 @@ func unmarshalMessage(command string, data []byte) (Message, []byte) {
 		msg = new(RejectMessage)
 	default:
 		panic(fmt.Sprintf("Unknown command to unmarshal: '%s'", command))
+	}
+	if command != msg.GetCommandString() {
+		panic("Internal error (command string mismatch)")
 	}
 	data = msg.Unmarshal(data)
 	return msg, data
@@ -103,6 +107,10 @@ func (msg *VersionMessage) Unmarshal(out []byte) []byte {
 	return out
 }
 
+func (msg VersionMessage) GetCommandString() string {
+	return "version"
+}
+
 // ========================================================================
 type VerAckMessage struct {
 }
@@ -113,6 +121,10 @@ func (v VerAckMessage) Marshal(out []byte) []byte {
 
 func (msg *VerAckMessage) Unmarshal(out []byte) []byte {
 	return out
+}
+
+func (msg VerAckMessage) GetCommandString() string {
+	return "verack"
 }
 
 // ========================================================================
@@ -147,6 +159,10 @@ func (msg *RejectMessage) Unmarshal(data []byte) []byte {
 	msg.Reason, data = UnmarshalVarStr(data)
 	msg.Data, data = UnmarshalBytes(data, uint32(len(data)))
 	return data
+}
+
+func (msg RejectMessage) GetCommandString() string {
+	return "reject"
 }
 
 // type AddrMessage struct {

@@ -12,24 +12,17 @@ func AsJSON(object interface{}) string {
 }
 
 func test4() {
-	conn := network.GetTestConn(6)
-	client := network.Client(conn)
+	client := network.TestClient(6)
 	defer client.Close()
 
 	var vermsg network.Message = network.NewVersionMessage()
-	var packet = network.CreatePacket(network.MAGIC_testnet3, "version", vermsg)
-	fmt.Println("Sending: ", AsJSON(packet))
-	client.SendPacket(packet)
-	retmsg := client.ReadPacket()
-	fmt.Println("Received: ", AsJSON(retmsg))
+	client.SendMessage(vermsg)
+	retmsg, command := client.ReceiveMessage()
+	fmt.Println("Received: ", command, AsJSON(retmsg))
 
-	vermsg = &network.VerAckMessage{}
-	packet = network.CreatePacket(network.MAGIC_testnet3, "verack", vermsg)
-	fmt.Println("Sending: ", AsJSON(packet))
-	client.SendPacket(packet)
-	retmsg = client.ReadPacket()
-	fmt.Println("Received: ", AsJSON(retmsg))
-
+	client.SendMessage(&network.VerAckMessage{})
+	retmsg, command = client.ReceiveMessage()
+	fmt.Println("Received: ", command, AsJSON(retmsg))
 }
 
 func main() {
