@@ -29,6 +29,10 @@ func unmarshalMessage(command string, data []byte) (Message, []byte) {
 		msg = new(AlertMessage)
 	case "addr":
 		msg = new(AddrMessage)
+	case "sendheaders":
+		msg = new(SendHeadersMessage)
+	case "getheaders":
+		msg = new(GetHeadersMessage)
 	default:
 		panic(fmt.Sprintf("Unknown command to unmarshal: '%s'", command))
 	}
@@ -69,7 +73,7 @@ func NewVersionMessage() *VersionMessage {
 
 	msg := VersionMessage{
 		Version:      31800,
-		Services:     NODE_NETWORK,
+		Services:     0, //NODE_NETWORK,
 		Timestamp:    time.Now().Truncate(time.Second),
 		ReceiverAddr: NetAddr{NODE_NETWORK, net.IPv4(127, 0, 0, 1), 8333},
 		FromAddr:     NetAddr{NODE_NETWORK, net.IPv4(127, 0, 0, 1), 8333},
@@ -260,4 +264,38 @@ func (msg *AddrMessage) Unmarshal(data []byte) []byte {
 
 func (msg AddrMessage) GetCommandString() string {
 	return "addr"
+}
+
+// ========================================================================
+type SendHeadersMessage struct {
+	// todo: implement sendheaders
+}
+
+func (msg SendHeadersMessage) Marshal(out []byte) []byte {
+	return out
+}
+
+func (msg *SendHeadersMessage) Unmarshal(data []byte) []byte {
+	return data
+}
+
+func (msg SendHeadersMessage) GetCommandString() string {
+	return "sendheaders"
+}
+
+// ========================================================================
+type GetHeadersMessage struct {
+	// todo: implement getheaders
+}
+
+func (msg GetHeadersMessage) Marshal(out []byte) []byte {
+	return out
+}
+
+func (msg *GetHeadersMessage) Unmarshal(data []byte) []byte {
+	return data
+}
+
+func (msg GetHeadersMessage) GetCommandString() string {
+	return "getheaders"
 }

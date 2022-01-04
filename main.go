@@ -20,10 +20,10 @@ func test4() {
 	client := network.TestClient(*numptr)
 	defer client.Close()
 
-	var vermsg = network.NewVersionMessage()
+	vermsg := network.NewVersionMessage()
 	vermsg.Version = uint32(*versionptr)
-
 	client.SendMessage(vermsg)
+
 	retmsg, command := client.ReceiveMessage()
 	fmt.Println("Received: ", command, AsJSON(retmsg))
 
