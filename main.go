@@ -3,6 +3,7 @@ package main
 import (
 	"bitcoin/network"
 	"encoding/json"
+	"flag"
 	"fmt"
 )
 
@@ -12,8 +13,10 @@ func AsJSON(object interface{}) string {
 }
 
 func test4() {
-	// client := network.TestClient(6)
-	client := network.TestClient(5)
+	numptr := flag.Int("ip", 0, "take n-th discovered ip address")
+	flag.Parse()
+
+	client := network.TestClient(*numptr)
 	defer client.Close()
 
 	var vermsg network.Message = network.NewVersionMessage()
