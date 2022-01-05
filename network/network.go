@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -55,7 +56,12 @@ func cleanString(in []byte) string {
 func hexPrinter(in []byte) {
 	l := 16
 	for start := 0; start < len(in); start += l {
-		fmt.Printf("0x%04X  % x  %s\n", start, in[start:start+l], cleanString(in[start:start+l]))
+		end := start + l
+		if end > len(in) {
+			end = len(in)
+		}
+		pad := strings.Repeat("   ", start+l-end)
+		fmt.Printf("0x%04X  % x%s  %s\n", start, in[start:end], pad, cleanString(in[start:end]))
 	}
 }
 
