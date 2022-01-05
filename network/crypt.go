@@ -3,9 +3,27 @@ package network
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
+	"fmt"
 )
 
-func doubleHash(data []byte) [32]byte {
+type Hash [32]byte
+
+func (h Hash) String() string {
+	return fmt.Sprintf("%x", h[:])
+}
+
+func StringToHash(s string) (Hash, error) {
+	var h Hash
+	b, error := hex.DecodeString(s)
+	if error != nil {
+		return h, error
+	}
+	copy(h[:], b[:])
+	return h, nil
+}
+
+func doubleHash(data []byte) Hash {
 	digest1 := sha256.Sum256(data)
 	digest2 := sha256.Sum256(digest1[:])
 	return digest2

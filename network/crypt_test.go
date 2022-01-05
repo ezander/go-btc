@@ -1,7 +1,6 @@
 package network
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -11,9 +10,9 @@ func TestDoubleHash(t *testing.T) {
 	// 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824 (first round of sha-256)
 	// 9595c9df90075148eb06860365df33584b75bff782a510c6cd4883a419833d50 (second round of sha-256)
 	digest := doubleHash([]byte("hello"))
-	s := fmt.Sprintf("%x", digest)
-	if s != "9595c9df90075148eb06860365df33584b75bff782a510c6cd4883a419833d50" {
-		t.Errorf("Incorrect double hashed value 'hello'->'%s' ", s)
+	expect, _ := StringToHash("9595c9df90075148eb06860365df33584b75bff782a510c6cd4883a419833d50")
+	if digest != expect {
+		t.Errorf("Incorrect double hashed value 'hello'->\n'%s' != \n'%s'", digest, expect)
 	}
 }
 

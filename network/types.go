@@ -2,6 +2,7 @@ package network
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
@@ -217,5 +218,38 @@ func UnmarshalTimeNetAddr(data []byte) (TimeNetAddr, []byte) {
 	var v TimeNetAddr
 	v.Time, data = UnmarshalTimestamp4(data)
 	v.NetAddr, data = UnmarshalNetAddr(data)
+	return v, data
+}
+
+// Crypto related types
+func MarshalHash(out []byte, v Hash) []byte {
+	return append(out, v[:]...)
+}
+
+func UnmarshalHash(data []byte) (Hash, []byte) {
+	v := Hash{}
+	copy(v[:], data[:32])
+	return v, data[32:]
+}
+
+func (h Hash) MarshalJSON() ([]byte, error) {
+	return json.Marshal(h.String())
+}
+
+func MarshalHashes(out []byte, v []Hash) []byte {
+	out = MarshalVarInt(out, uint64(len(v)))
+	// can be made more efficient by preallocating space
+	for _, h := range v {
+		out = MarshalHash(out, h)
+	}
+	return out
+}
+
+func UnmarshalHashes(data []byte) ([]Hash, []byte) {
+	l, data := UnmarshalVarInt(data)
+	v := make([]Hash, l)
+	for i := 0; i < int(l); i++ {
+		v[i], data = UnmarshalHash(data)
+	}
 	return v, data
 }

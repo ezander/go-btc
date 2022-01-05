@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+const (
+	format_incorrect_length   = "Incorrect length of marshalled data (%v!=%v) for '%v'"
+	format_cosume_data        = "Len of data should be zero after unmarshalling (%d) for '%v'"
+	format_unmarshalled_match = "Unmarshalled data did not match (\n%v !=\n%v)"
+)
+
 func TestMarshalUint8(t *testing.T) {
 	vals := []uint8{0x00, 0xFE}
 	lens := []int{1, 1}
@@ -226,7 +232,7 @@ func TestMarshalIP(t *testing.T) {
 	}
 }
 
-func TestNetAddr(t *testing.T) {
+func TestMarshalNetAddr(t *testing.T) {
 	vals := []NetAddr{{1234, net.IPv4zero, 8333}, {34, net.IPv6loopback, 18333}}
 	lens := []int{26, 26} // 8 + 16 + 2
 	for i, x := range vals {
@@ -244,20 +250,38 @@ func TestNetAddr(t *testing.T) {
 	}
 }
 
-func TestTimeNetAddr(t *testing.T) {
+func TestMarshalTimeNetAddr(t *testing.T) {
 	vals := []TimeNetAddr{{time.Unix(0, 0), NetAddr{1234, net.IPv4zero, 8333}}, {time.Unix(1_000_000_000, 0), NetAddr{34, net.IPv6loopback, 18333}}}
 	lens := []int{30, 30} // 4 + 8 + 16 + 2
 	for i, x := range vals {
 		data := MarshalTimeNetAddr([]byte{}, x)
 		if len(data) != lens[i] {
-			t.Errorf("Incorrect length of marshalled data for '%v' (%v!=%v)", x, len(data), lens[i])
+			t.Errorf(format_incorrect_length, len(data), lens[i], x)
 		}
 		y, data := UnmarshalTimeNetAddr(data)
 		if len(data) > 0 {
-			t.Errorf("Len of data should be zero after unmarshalling (%d)", len(data))
+			t.Errorf(format_cosume_data, len(data), x)
 		}
 		if !reflect.DeepEqual(y, x) {
-			t.Errorf("Unmarshalled data did not match (%v!=%v)", y.String(), x.String())
+			t.Errorf(format_unmarshalled_match, y, x)
+		}
+	}
+}
+
+func TestMarshalHash(t *testing.T) {
+	vals := []Hash{{}, doubleHash([]byte{1, 2, 3}), doubleHash([]byte{})}
+	lens := []int{32, 32, 32}
+	for i, x := range vals {
+		data := MarshalHash([]byte{}, x)
+		if len(data) != lens[i] {
+			t.Errorf(format_incorrect_length, len(data), lens[i], x)
+		}
+		y, data := UnmarshalHash(data)
+		if len(data) > 0 {
+			t.Errorf(format_cosume_data, len(data), x)
+		}
+		if !reflect.DeepEqual(y, x) {
+			t.Errorf(format_unmarshalled_match, y, x)
 		}
 	}
 }

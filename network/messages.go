@@ -33,6 +33,10 @@ func unmarshalMessage(command string, data []byte) (Message, []byte) {
 		msg = new(SendHeadersMessage)
 	case "getheaders":
 		msg = new(GetHeadersMessage)
+	case "getblocks":
+		msg = new(GetBlocksMessage)
+	case "inv":
+		msg = new(InvMessage)
 	default:
 		panic(fmt.Sprintf("Unknown command to unmarshal: '%s'", command))
 	}
@@ -267,8 +271,19 @@ func (msg AddrMessage) GetCommandString() string {
 }
 
 // ========================================================================
+
+// sendheaders
+//
+// Request for Direct headers announcement.
+//
+// Upon receipt of this message, the node is be permitted, but not required, to announce new blocks by headers command (instead of inv command).
+//
+// This message is supported by the protocol version >= 70012 or Bitcoin Core version >= 0.12.0.
+//
+// See BIP 130 for more information.
+//
+// No additional data is transmitted with this message.
 type SendHeadersMessage struct {
-	// todo: implement sendheaders
 }
 
 func (msg SendHeadersMessage) Marshal(out []byte) []byte {
@@ -284,8 +299,19 @@ func (msg SendHeadersMessage) GetCommandString() string {
 }
 
 // ========================================================================
+
+// getheaders
+
+// Return a headers packet containing the headers of blocks starting right after the last known hash in the block locator object, up to hash_stop or 2000 blocks, whichever comes first. To receive the next block headers, one needs to issue getheaders again with a new block locator object. Keep in mind that some clients may provide headers of blocks which are invalid if the block locator object contains a hash on the invalid branch.
+
+// Payload:
+
 type GetHeadersMessage struct {
-	// todo: implement getheaders
+	// Field Size 	Description 	Data type 	Comments
+	// 4 	version 	uint32_t 	the protocol version
+	// 1+ 	hash count 	var_int 	number of block locator hash entries
+	// 32+ 	block locator hashes 	char[32] 	block locator object; newest back to genesis block (dense to start, but then sparse)
+	// 32 	hash_stop 	char[32] 	hash of the last desired block header; set to zero to get as many blocks as possible (2000)
 }
 
 func (msg GetHeadersMessage) Marshal(out []byte) []byte {
@@ -298,4 +324,107 @@ func (msg *GetHeadersMessage) Unmarshal(data []byte) []byte {
 
 func (msg GetHeadersMessage) GetCommandString() string {
 	return "getheaders"
+}
+
+// ========================================================================
+
+// getblocks
+
+// Return an inv packet containing the list of blocks starting right after the last known hash in the block locator object, up to hash_stop or 500 blocks, whichever comes first.
+
+// The locator hashes are processed by a node in the order as they appear in the message. If a block hash is found in the node's main chain, the list of its children is returned back via the inv message and the remaining locators are ignored, no matter if the requested limit was reached, or not.
+
+// To receive the next blocks hashes, one needs to issue getblocks again with a new block locator object. Keep in mind that some clients may provide blocks which are invalid if the block locator object contains a hash on the invalid branch.
+
+type GetBlocksMessage struct {
+	// Payload:
+	// Field Size 	Description 	Data type 	Comments
+	// 4 	version 	uint32_t 	the protocol version
+	// 1+ 	hash count 	var_int 	number of block locator hash entries
+	// 32+ 	block locator hashes 	char[32] 	block locator object; newest back to genesis block (dense to start, but then sparse)
+	// 32 	hash_stop 	char[32] 	hash of the last desired block; set to zero to get as many blocks as possible (500)
+	Version        uint32
+	BlockLocHashes []Hash
+	StopHash       Hash
+}
+
+func (msg GetBlocksMessage) Marshal(out []byte) []byte {
+	out = MarshalUint32(out, msg.Version)
+	out = MarshalHashes(out, msg.BlockLocHashes)
+	out = MarshalHash(out, msg.StopHash)
+	return out
+}
+
+func (msg *GetBlocksMessage) Unmarshal(data []byte) []byte {
+	msg.Version, data = UnmarshalUint32(data)
+	msg.BlockLocHashes, data = UnmarshalHashes(data)
+	msg.StopHash, data = UnmarshalHash(data)
+	return data
+}
+
+func (msg GetBlocksMessage) GetCommandString() string {
+	return "getblocks"
+}
+
+// ========================================================================
+
+// Allows a node to advertise its knowledge of one or more objects. It can be
+// received unsolicited, or in reply to getblocks.
+
+// Payload (maximum 50,000 entries, which is just over 1.8 megabytes):
+// Field Size 	Description 	Data type 	Comments
+// 1+ 	count 	var_int 	Number of inventory entries
+// 36x? 	inventory 	inv_vect[] 	Inventory vectors
+
+type Inv struct {
+	Type uint32 // 	Identifies the object type linked to this inventory
+	Hash Hash   // 	Hash of the object
+}
+
+func MarshalInv(out []byte, v Inv) []byte {
+	out = MarshalUint32(out, v.Type)
+	out = MarshalHash(out, v.Hash)
+	return out
+}
+
+func UnmarshalInv(data []byte) (Inv, []byte) {
+	var v Inv
+	v.Type, data = UnmarshalUint32(data)
+	v.Hash, data = UnmarshalHash(data)
+	return v, data
+}
+
+func MarshalInvs(out []byte, v []Inv) []byte {
+	out = MarshalVarInt(out, uint64(len(v)))
+	// can be made more efficient by preallocating space
+	for _, h := range v {
+		out = MarshalInv(out, h)
+	}
+	return out
+}
+
+func UnmarshalInvs(data []byte) ([]Inv, []byte) {
+	l, data := UnmarshalVarInt(data)
+	v := make([]Inv, l)
+	for i := 0; i < int(l); i++ {
+		v[i], data = UnmarshalInv(data)
+	}
+	return v, data
+}
+
+type InvMessage struct {
+	Invs []Inv
+}
+
+func (msg InvMessage) Marshal(out []byte) []byte {
+	return MarshalInvs(out, msg.Invs)
+}
+
+func (msg *InvMessage) Unmarshal(data []byte) []byte {
+	msg.Invs, data = UnmarshalInvs(data)
+	return data
+}
+
+func (msg InvMessage) GetCommandString() string {
+	return "inv"
 }
