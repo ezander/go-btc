@@ -223,8 +223,21 @@ func (msg PongMessage) GetCommandString() string {
 
 // ========================================================================
 type AlertMessage struct {
-	Payload   []byte
-	Signature []byte
+	Version    uint32    // int32_t 	Alert format version
+	RelayUntil time.Time // int64_t The timestamp beyond which nodes should stop relaying this alert
+	Expiration time.Time //	int64_t 	The timestamp beyond which this alert is no longer in effect and should be ignored
+	ID         uint32    // int32_t 	A unique ID number for this alert
+	Cancel     uint32    // int32_t 	All alerts with an ID number less than or equal to this number should be cancelled: deleted and not accepted in the future
+	setCancel  []uint32  // set<int32_t> 	All alert IDs contained in this set should be cancelled as above
+	MinVer     uint32    // int32_t 	This alert only applies to versions greater than or equal to this version. Other versions should still relay it.
+	MaxVer     uint32    // int32_t 	This alert only applies to versions less than or equal to this version. Other versions should still relay it.
+	setSubVer  []string  // set<string> 	If this set contains any elements, then only nodes that have their subVer contained in this set are affected by the alert. Other versions should still relay it.
+	Priority   uint32    // int32_t 	Relative priority compared to other alerts
+	Comment    string    // string 	A comment on the alert that is not displayed
+	StatusBar  string    // string 	The alert message that is displayed to the user
+	Reserved   string    // string 	Reserved
+	Payload    []byte
+	Signature  []byte
 }
 
 func (msg AlertMessage) Marshal(out []byte) []byte {
@@ -232,11 +245,59 @@ func (msg AlertMessage) Marshal(out []byte) []byte {
 }
 
 func (msg *AlertMessage) Unmarshal(data []byte) []byte {
-	// l := len(data)
-	// lp := l -
-	// 04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284
-	// (hash) 1AGRxqDa5WjUKBwHB9XYEjmkv1ucoUUy1s
-	msg.Payload, data = UnmarshalBytes(data, uint32(len(data)))
+
+	// Unmarshal payload and signature
+	lenPayload, data := UnmarshalVarInt(data)
+	msg.Payload, data = UnmarshalBytes(data, uint32(lenPayload))
+	lenSignature, data := UnmarshalVarInt(data)
+	msg.Signature, data = UnmarshalBytes(data, uint32(lenSignature))
+
+	// Check signature
+	// Public key
+	//   04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284
+	//   (hash) 1AGRxqDa5WjUKBwHB9XYEjmkv1ucoUUy1s
+	// Public keys (in scripts) are given as
+	// 		04 <x> <y> where x and y are 32 byte big-endian integers representing the coordinates of a point on the curve
+	// or in compressed form given as
+	//     <sign> <x> where <sign> is 0x02 if y is even and 0x03 if y is odd.
+	key := PublicKeyFromString("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284")
+	hash := doubleHash(msg.Payload)
+	valid := VerifyASN1(&key, hash[:], msg.Signature)
+	if !valid {
+		// we do nothing... does not matter anyway, as the alert
+		// system has been retired and the private key is in the wild
+		// (I just wanted to try whether I could validate the alert message
+		// about retiring the alert system - didn't work though...)
+		// And furthermore, it's send only to pre-70000 clients anyway
+	}
+
+	// Unmarshal fields from payload
+	payload := msg.Payload
+	msg.Version, payload = UnmarshalUint32(payload)
+	msg.RelayUntil, payload = UnmarshalTimestamp(payload)
+	msg.Expiration, payload = UnmarshalTimestamp(payload)
+	msg.ID, payload = UnmarshalUint32(payload)
+	msg.Cancel, payload = UnmarshalUint32(payload)
+	nCancel, payload := UnmarshalVarInt(payload)
+	msg.setCancel = make([]uint32, nCancel)
+	for i := range msg.setCancel {
+		msg.setCancel[i], payload = UnmarshalUint32(payload)
+	}
+	msg.MinVer, payload = UnmarshalUint32(payload)
+	msg.MaxVer, payload = UnmarshalUint32(payload)
+	nSubVer, payload := UnmarshalVarInt(payload)
+	msg.setSubVer = make([]string, nSubVer)
+	for i := range msg.setSubVer {
+		msg.setSubVer[i], payload = UnmarshalVarStr(payload)
+	}
+	msg.Priority, payload = UnmarshalUint32(payload)
+	msg.Comment, payload = UnmarshalVarStr(payload)
+	msg.StatusBar, payload = UnmarshalVarStr(payload)
+	msg.Reserved, payload = UnmarshalVarStr(payload)
+	if len(payload) > 0 {
+		fmt.Printf("Warning: Payload not fully parsed at end of alert message...")
+	}
+
 	return data
 }
 
@@ -305,20 +366,28 @@ func (msg SendHeadersMessage) GetCommandString() string {
 // Return a headers packet containing the headers of blocks starting right after the last known hash in the block locator object, up to hash_stop or 2000 blocks, whichever comes first. To receive the next block headers, one needs to issue getheaders again with a new block locator object. Keep in mind that some clients may provide headers of blocks which are invalid if the block locator object contains a hash on the invalid branch.
 
 // Payload:
+// Field Size 	Description 	Data type 	Comments
+// 4 	version 	uint32_t 	the protocol version
+// 32+ 	block locator hashes 	char[32] 	block locator object; newest back to genesis block (dense to start, but then sparse)
+// 32 	hash_stop 	char[32] 	hash of the last desired block header; set to zero to get as many blocks as possible (2000)
 
 type GetHeadersMessage struct {
-	// Field Size 	Description 	Data type 	Comments
-	// 4 	version 	uint32_t 	the protocol version
-	// 1+ 	hash count 	var_int 	number of block locator hash entries
-	// 32+ 	block locator hashes 	char[32] 	block locator object; newest back to genesis block (dense to start, but then sparse)
-	// 32 	hash_stop 	char[32] 	hash of the last desired block header; set to zero to get as many blocks as possible (2000)
+	Version        uint32
+	BlockLocHashes []Hash
+	StopHash       Hash
 }
 
 func (msg GetHeadersMessage) Marshal(out []byte) []byte {
+	out = MarshalUint32(out, msg.Version)
+	out = MarshalHashes(out, msg.BlockLocHashes)
+	out = MarshalHash(out, msg.StopHash)
 	return out
 }
 
 func (msg *GetHeadersMessage) Unmarshal(data []byte) []byte {
+	msg.Version, data = UnmarshalUint32(data)
+	msg.BlockLocHashes, data = UnmarshalHashes(data)
+	msg.StopHash, data = UnmarshalHash(data)
 	return data
 }
 
