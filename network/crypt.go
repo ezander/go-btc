@@ -7,11 +7,15 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"math/big"
 
 	"golang.org/x/crypto/cryptobyte"
 	"golang.org/x/crypto/cryptobyte/asn1"
 )
+
+//Hash
+//====
 
 type Hash [32]byte
 
@@ -20,6 +24,7 @@ func (h Hash) String() string {
 }
 
 func StringToHash(s string) (Hash, error) {
+	// https://btcinformation.org/en/glossary/internal-byte-order
 	var h Hash
 	b, error := hex.DecodeString(s)
 	if error != nil {
@@ -27,6 +32,11 @@ func StringToHash(s string) (Hash, error) {
 	}
 	copy(h[:], b[:])
 	return h, nil
+}
+
+func RPCStringToHash(s string) (Hash, error) {
+	// https://btcinformation.org/en/glossary/rpc-byte-order
+	return StringToHash(reversedHexString(s))
 }
 
 func doubleHash(data []byte) Hash {
@@ -40,13 +50,22 @@ func checksum(data []byte) uint32 {
 	return binary.LittleEndian.Uint32(digest[:4])
 }
 
+// Bits
+//=====
+
+type Compact uint32
+
+func GetDifficulty(b Compact) float64 {
+	// See: https://en.bitcoin.it/wiki/Difficulty
+	exp := (uint32(b) & 0xFF000000) >> 24
+	mant := uint32(b) & 0x00FFFFFF
+	return float64(0x0000FFFF) / float64(mant) * math.Pow(2.0, 8*float64(0x1d-exp))
+}
+
+// Public keys
+//============
+
 func PublicKeyFromString(s string) ecdsa.PublicKey {
-	reverse := func(s []byte) []byte {
-		for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-			s[i], s[j] = s[j], s[i]
-		}
-		return s
-	}
 
 	buffer, err := hex.DecodeString(s)
 	if err != nil {

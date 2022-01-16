@@ -223,6 +223,7 @@ func UnmarshalTimeNetAddr(data []byte) (TimeNetAddr, []byte) {
 
 // Crypto related types
 func MarshalHash(out []byte, v Hash) []byte {
+	// return append(out, reversed(v[:])...)
 	return append(out, v[:]...)
 }
 
@@ -252,4 +253,13 @@ func UnmarshalHashes(data []byte) ([]Hash, []byte) {
 		v[i], data = UnmarshalHash(data)
 	}
 	return v, data
+}
+
+func MarshalCompact(out []byte, v Compact) []byte {
+	return MarshalUint32(out, uint32(v))
+}
+
+func UnmarshalCompact(data []byte) (Compact, []byte) {
+	value, data := UnmarshalUint32(data)
+	return Compact(value), data
 }

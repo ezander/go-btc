@@ -37,6 +37,8 @@ func unmarshalMessage(command string, data []byte) (Message, []byte) {
 		msg = new(GetBlocksMessage)
 	case "inv":
 		msg = new(InvMessage)
+	case "headers":
+		msg = new(HeadersMessage)
 	default:
 		panic(fmt.Sprintf("Unknown command to unmarshal: '%s'", command))
 	}
@@ -496,4 +498,50 @@ func (msg *InvMessage) Unmarshal(data []byte) []byte {
 
 func (msg InvMessage) GetCommandString() string {
 	return "inv"
+}
+
+// ========================================================================
+
+// Allows a node to advertise its knowledge of one or more objects. It can be
+// received unsolicited, or in reply to getblocks.
+
+func MarshalHeaders(out []byte, v []Header, addZeros bool) []byte {
+	out = MarshalVarInt(out, uint64(len(v)))
+	for _, h := range v {
+		out = MarshalHeader(out, h)
+		if addZeros {
+			out = MarshalVarInt(out, 0)
+		}
+	}
+	return out
+}
+
+func UnmarshalHeaders(data []byte, addZeros bool) ([]Header, []byte) {
+	l, data := UnmarshalVarInt(data)
+	v := make([]Header, l)
+	for i := 0; i < int(l); i++ {
+		v[i], data = UnmarshalHeader(data)
+		if addZeros {
+			_, data = UnmarshalVarInt(data)
+			// maybe should check if _ if really 0
+		}
+	}
+	return v, data
+}
+
+type HeadersMessage struct {
+	Headers []Header
+}
+
+func (msg HeadersMessage) Marshal(out []byte) []byte {
+	return MarshalHeaders(out, msg.Headers, true)
+}
+
+func (msg *HeadersMessage) Unmarshal(data []byte) []byte {
+	msg.Headers, data = UnmarshalHeaders(data, true)
+	return data
+}
+
+func (msg HeadersMessage) GetCommandString() string {
+	return "headers"
 }
